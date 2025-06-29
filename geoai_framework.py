@@ -201,11 +201,16 @@ This is a new, independent request. Your sole task is to generate a JSON array o
             # Proceed if the response is a list (the expected format)
             if isinstance(parsed_json, list):
                 workflow_steps = []
-                for step_data in parsed_json:
-                    if isinstance(step_data, dict) and 'step_id' in step_data and 'operation' in step_data:
-                        workflow_steps.append(GeoprocessingStep(**step_data))
+                for i, step_data in enumerate(parsed_json):
+                    normalized_step = self._normalize_step(step_data, i)
+                    if normalized_step:
+                        try:
+                            workflow_steps.append(GeoprocessingStep(**normalized_step))
+                        except TypeError as e:
+                            logger.warning(f"Skipping step after normalization due to TypeError: {e}. Step: {normalized_step}")
                     else:
-                        logger.warning(f"Skipping malformed step in workflow plan: {step_data}")
+                        logger.warning(f"Skipping malformed step that could not be normalized: {step_data}")
+
                 self.reasoning_history.append(f"Workflow Planned: {len(workflow_steps)} steps generated.")
                 return workflow_steps
             else:
@@ -274,6 +279,46 @@ This is a new, independent request. Your sole task is to generate a JSON array o
             parameters=step.parameters,
             inputs=inputs
         )
+
+    def _normalize_step(self, step_data: dict, index: int) -> Optional[dict]:
+        """Attempts to convert a potentially malformed step from the LLM into the correct format."""
+        if not isinstance(step_data, dict):
+            return None
+
+        # If the format is already correct, return it as is
+        if 'step_id' in step_data and 'operation' in step_data:
+            return step_data
+
+        # Handle the specific malformed structure: {'step': {'tool': '...'}, 'output': '...'}
+        try:
+            normalized = {}
+            nested_step = step_data.get('step', {})
+
+            normalized['step_id'] = f"step_{index + 1}_{nested_step.get('tool', 'op')}"
+            normalized['operation'] = nested_step.get('tool')
+            normalized['parameters'] = nested_step.get('parameters', {})
+            normalized['output_data'] = step_data.get('output')
+            normalized['reasoning'] = nested_step.get('name', "Reasoning not provided by LLM.")
+            normalized['dependencies'] = step_data.get('dependencies', [])
+
+            # Infer input_data from parameters, a common LLM pattern
+            if 'input_layer' in normalized['parameters']:
+                normalized['input_data'] = [normalized['parameters']['input_layer']]
+            elif 'layer1' in normalized['parameters'] and 'layer2' in normalized['parameters']:
+                normalized['input_data'] = [normalized['parameters']['layer1'], normalized['parameters']['layer2']]
+            elif 'input_raster' in normalized['parameters']:
+                 normalized['input_data'] = [normalized['parameters']['input_raster']]
+            else:
+                normalized['input_data'] = []
+
+            # Check if we successfully extracted the essentials
+            if normalized.get('operation') and normalized.get('output_data'):
+                return normalized
+        except Exception as e:
+            logger.warning(f"Could not normalize step due to an error: {e}")
+            return None
+        
+        return None
     
     def generate_explanation(self, workflow_result: WorkflowResult) -> str:
         """Generate human-readable explanation of the workflow"""
