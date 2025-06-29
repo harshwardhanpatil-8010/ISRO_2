@@ -100,7 +100,8 @@ st.markdown("""
 class GeoAIApp:
     def __init__(self):
         self.initialize_session_state()
-        self.load_system_components()
+        self.geoai_engine, self.data_manager, self.geoprocessing_toolkit = self.load_system_components()
+
     
     def initialize_session_state(self):
         """Initialize Streamlit session state variables"""
@@ -110,15 +111,12 @@ class GeoAIApp:
             st.session_state.current_workflow = None
     
 @st.cache_resource
-def load_system_components(_self):
-    """Load and initialize system components, cached for performance."""
+def load_system_components(self):
     try:
-        # ✅ Authenticate with Hugging Face
         from huggingface_hub import login
-        hf_token = st.secrets["HUGGINGFACE_API_KEY"]
+        hf_token = st.secrets["HUGGINGFACEHUB_API_TOKEN"]
         login(token=hf_token)
 
-        # Now initialize components
         engine = GeoAIReasoningEngine()
         data_manager = DataSourceManager()
         toolkit = GeoprocessingToolkit()
@@ -130,7 +128,7 @@ def load_system_components(_self):
         return None, None, None
 
 
-    def render_header(self):
+def render_header(self):
         """Render the main application header"""
         st.markdown("""
         <div class="main-header">
@@ -140,7 +138,7 @@ def load_system_components(_self):
         </div>
         """, unsafe_allow_html=True)
     
-    def render_sidebar(self):
+def render_sidebar(self):
         """Render the sidebar with configuration options"""
         with st.sidebar:
             st.header("🛠️ System Configuration")
@@ -163,7 +161,7 @@ def load_system_components(_self):
                 'bbox': tuple(map(float, bbox_input.split(','))) if bbox_input else None
             }
     
-    def render_query_interface(self):
+def render_query_interface(self):
         """Render the query input interface"""
         st.header("💬 Natural Language Query Interface")
         
@@ -186,7 +184,7 @@ def load_system_components(_self):
         )
         return user_query
 
-    def fetch_data_for_workflow(self, data_requirements: List[str], bbox: Optional[tuple]) -> Dict[str, Any]:
+def fetch_data_for_workflow(self, data_requirements: List[str], bbox: Optional[tuple]) -> Dict[str, Any]:
         """Fetches the necessary data for a workflow using the DataSourceManager."""
         fetched_data = {}
         if not bbox:
@@ -217,7 +215,7 @@ def load_system_components(_self):
                     st.warning(f"No data source configured for requirement: {req}")
         return fetched_data
 
-    def process_query(self, query: str, config: Dict):
+def process_query(self, query: str, config: Dict):
         """Process the user query, plan, and execute the workflow."""
         if not query.strip():
             st.warning("Please enter a query to analyze.")
@@ -245,7 +243,7 @@ def load_system_components(_self):
         st.session_state.current_workflow = workflow_result
         st.session_state.workflow_history.append(workflow_result)
 
-    def render_reasoning_display(self, workflow_result: WorkflowResult):
+def render_reasoning_display(self, workflow_result: WorkflowResult):
         """Render the chain-of-thought reasoning display"""
         st.header("🧠 Chain-of-Thought Reasoning")
         if workflow_result and workflow_result.reasoning_chain:
@@ -254,7 +252,7 @@ def load_system_components(_self):
         else:
             st.info("No reasoning steps available.")
 
-    def render_workflow_steps(self, workflow_result: WorkflowResult):
+def render_workflow_steps(self, workflow_result: WorkflowResult):
         """Render the workflow steps visualization"""
         st.header("📋 Generated Workflow")
         if workflow_result and workflow_result.steps:
@@ -271,7 +269,7 @@ def load_system_components(_self):
         else:
             st.info("No workflow steps generated.")
 
-    def render_results_visualization(self, workflow_result: WorkflowResult):
+def render_results_visualization(self, workflow_result: WorkflowResult):
         """Render results visualization dynamically based on workflow output."""
         st.header("📊 Analysis Results")
         if not workflow_result or not workflow_result.success:
@@ -291,7 +289,7 @@ def load_system_components(_self):
         with tab3:
             self.render_export_options(workflow_result)
 
-    def render_map_visualization(self, workflow_result: WorkflowResult):
+def render_map_visualization(self, workflow_result: WorkflowResult):
         """Renders a map visualizing the output GeoDataFrames from the workflow."""
         st.subheader("Map Visualization")
         
@@ -314,7 +312,7 @@ def load_system_components(_self):
         folium.LayerControl().add_to(m)
         st_folium(m, width=700, height=500)
 
-    def render_data_table(self, workflow_result: WorkflowResult):
+def render_data_table(self, workflow_result: WorkflowResult):
         """Renders a data table for the first output GeoDataFrame."""
         st.subheader("Data Preview")
         for name, output in workflow_result.outputs.items():
@@ -324,7 +322,7 @@ def load_system_components(_self):
                 return # Show only the first one
         st.info("No tabular data found in workflow outputs.")
 
-    def render_export_options(self, workflow_result: WorkflowResult):
+def render_export_options(self, workflow_result: WorkflowResult):
         """Render export options for workflow outputs."""
         st.subheader("Export Results")
         for name, output in workflow_result.outputs.items():
@@ -336,7 +334,7 @@ def load_system_components(_self):
                     mime="application/geo+json"
                 )
 
-    def run(self):
+def run(self):
         """Main application runner"""
         self.render_header()
         self.geoai_engine, self.data_manager, self.geoprocessing_toolkit = self.load_system_components()
