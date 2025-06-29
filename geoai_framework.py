@@ -200,21 +200,29 @@ class GeoAIReasoningEngine:
 
             parsed_json = json.loads(llm_response)
             
-            # Defensive check: Ensure the response is a list of steps
-            if not isinstance(parsed_json, list):
-                logger.error(f"LLM returned a dictionary, not a list of steps. Response: {parsed_json}")
+            # Definitive check for the specific error mode.
+            # If the model returns the analysis dict instead of a workflow list, it will have an 'intent' key.
+            if isinstance(parsed_json, dict) and 'intent' in parsed_json:
+                logger.error(
+                    f"LLM returned the query analysis object instead of a workflow plan. "
+                    f"Response: {parsed_json}"
+                )
+                return [] # Return an empty list to prevent crashing
+
+            # Proceed if the response is a list (the expected format)
+            if isinstance(parsed_json, list):
+                workflow_steps = []
+                for step_data in parsed_json:
+                    if isinstance(step_data, dict) and 'step_id' in step_data and 'operation' in step_data:
+                        workflow_steps.append(GeoprocessingStep(**step_data))
+                    else:
+                        logger.warning(f"Skipping malformed step in workflow plan: {step_data}")
+                self.reasoning_history.append(f"Workflow Planned: {len(workflow_steps)} steps generated.")
+                return workflow_steps
+            else:
+                logger.error(f"LLM response was not a list of steps. Response: {parsed_json}")
                 return []
 
-            workflow_steps = []
-            for step_data in parsed_json:
-                # Ensure the item is a dictionary and has the required keys
-                if isinstance(step_data, dict) and 'step_id' in step_data and 'operation' in step_data:
-                    workflow_steps.append(GeoprocessingStep(**step_data))
-                else:
-                    logger.warning(f"Skipping malformed step in workflow plan: {step_data}")
-
-            self.reasoning_history.append(f"Workflow Planned: {len(workflow_steps)} steps generated.")
-            return workflow_steps
         except (json.JSONDecodeError, TypeError) as e:
             logger.error(f"Failed to parse LLM response for workflow plan: {e}")
             self.reasoning_history.append("Error: Could not create a valid workflow plan.")
