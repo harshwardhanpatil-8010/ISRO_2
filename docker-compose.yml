@@ -11,7 +11,7 @@ services:
       - ./cache:/app/cache
       - ./logs:/app/logs
     environment:
-      - BHOONIDHI_API_KEY=${BHOONIDHI_API_KEY}
+      # - BHOONIDHI_API_KEY=${BHOONIDHI_API_KEY}
       - HUGGINGFACE_API_KEY=${HUGGINGFACE_API_KEY}
     depends_on:
       - redis

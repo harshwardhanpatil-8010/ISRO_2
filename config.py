@@ -56,12 +56,12 @@ class Config:
     
     # Data source configurations
     DATA_SOURCES = {
-        "bhoonidhi": DataSourceConfig(
-            name="Bhoonidhi",
-            api_url="https://bhoonidhi.nrsc.gov.in/api",
-            api_key=os.getenv("BHOONIDHI_API_KEY", ""),
-            rate_limit=100
-        ),
+        # "bhoonidhi": DataSourceConfig(
+        #     name="Bhoonidhi",
+        #     api_url="https://bhoonidhi.nrsc.gov.in/api",
+        #     api_key=os.getenv("BHOONIDHI_API_KEY", ""),
+        #     rate_limit=100
+        # ),
         "osm": DataSourceConfig(
             name="OpenStreetMap",
             api_url="https://overpass-api.de/api/interpreter",
@@ -142,7 +142,7 @@ class Config:
     @classmethod
     def get_model_config(cls, model_name: str) -> ModelConfig:
         """Get model configuration by name"""
-        return cls.MODELS.get(model_name, cls.MODELS["mistral-7b"])
+        return cls.MODELS.get(model_name, cls.MODELS["gemma-2b-it"])
     
     @classmethod
     def get_data_source_config(cls, source_name: str) -> DataSourceConfig:

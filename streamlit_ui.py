@@ -89,7 +89,8 @@ def main():
         st.subheader("📊 Data Sources")
         data_sources = st.multiselect(
             "Available Data Sources",
-            ["Bhoonidhi", "OpenStreetMap", "SRTM DEM", "Landsat", "Sentinel-2"],
+            # ["Bhoonidhi", "OpenStreetMap", "SRTM DEM", "Landsat", "Sentinel-2"],
+            ["OpenStreetMap", "SRTM DEM", "Landsat", "Sentinel-2"],
             default=["OpenStreetMap", "SRTM DEM"]
         )
         

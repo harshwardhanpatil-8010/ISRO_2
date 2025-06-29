@@ -43,13 +43,13 @@ class Config:
     def get_data_source_config(source_name: str) -> DataSourceConfig:
         """Get configuration for a specific data source"""
         configs = {
-            "bhoonidhi": DataSourceConfig(
-                name="Bhoonidhi",
-                api_url="https://bhoonidhi.nrsc.gov.in/api/v1/",
-                api_key=os.getenv("BHOONIDHI_API_KEY"),
-                rate_limit=50,
-                timeout=30
-            ),
+            # "bhoonidhi": DataSourceConfig(
+            #     name="Bhoonidhi",
+            #     api_url="https://bhoonidhi.nrsc.gov.in/api/v1/",
+            #     api_key=os.getenv("BHOONIDHI_API_KEY"),
+            #     rate_limit=50,
+            #     timeout=30
+            # ),
             "osm": DataSourceConfig(
                 name="OpenStreetMap",
                 api_url="https://overpass-api.de/api/interpreter",
@@ -245,142 +245,142 @@ class DataCache:
         except Exception as e:
             logger.error(f"Failed to cache data: {e}")
 
-class BhoonidhiAPI(DataSourceInterface):
-    """Interface to Bhoonidhi - ISRO's geospatial data portal"""
+# class BhoonidhiAPI(DataSourceInterface):
+#     """Interface to Bhoonidhi - ISRO's geospatial data portal"""
     
-    def __init__(self):
-        config = Config.get_data_source_config("bhoonidhi")
-        super().__init__("Bhoonidhi", asdict(config))
-        self.base_url = config.api_url
-        self.api_key = config.api_key
+#     def __init__(self):
+#         config = Config.get_data_source_config("bhoonidhi")
+#         super().__init__("Bhoonidhi", asdict(config))
+#         self.base_url = config.api_url
+#         self.api_key = config.api_key
         
-        if not self.api_key:
-            logger.warning("Bhoonidhi API key not configured")
+#         if not self.api_key:
+#             logger.warning("Bhoonidhi API key not configured")
     
-    def fetch_data(self, query: DataQuery) -> DataResult:
-        """Fetch data from Bhoonidhi API"""
+#     def fetch_data(self, query: DataQuery) -> DataResult:
+#         """Fetch data from Bhoonidhi API"""
         
-        # Check cache first
-        cached_result = self.cache.get(query)
-        if cached_result:
-            logger.info(f"Returning cached result for query {query.query_id}")
-            return cached_result
+#         # Check cache first
+#         cached_result = self.cache.get(query)
+#         if cached_result:
+#             logger.info(f"Returning cached result for query {query.query_id}")
+#             return cached_result
         
-        # Rate limiting
-        self.rate_limiter.wait_if_needed()
+#         # Rate limiting
+#         self.rate_limiter.wait_if_needed()
         
-        try:
-            # Construct API request
-            params = self._build_api_params(query)
-            headers = {"Authorization": f"Bearer {self.api_key}"} if self.api_key else {}
+#         try:
+#             # Construct API request
+#             params = self._build_api_params(query)
+#             headers = {"Authorization": f"Bearer {self.api_key}"} if self.api_key else {}
             
-            logger.info(f"Fetching data from Bhoonidhi for query {query.query_id}")
-            response = requests.get(
-                urljoin(self.base_url, "data/search"),
-                params=params,
-                headers=headers,
-                timeout=30
-            )
+#             logger.info(f"Fetching data from Bhoonidhi for query {query.query_id}")
+#             response = requests.get(
+#                 urljoin(self.base_url, "data/search"),
+#                 params=params,
+#                 headers=headers,
+#                 timeout=30
+#             )
             
-            if response.status_code == 200:
-                data = response.json()
+#             if response.status_code == 200:
+#                 data = response.json()
                 
-                # Convert to appropriate format
-                if query.data_type == "vector":
-                    gdf = self._convert_to_geodataframe(data)
-                    result_data = gdf
-                else:
-                    result_data = data
+#                 # Convert to appropriate format
+#                 if query.data_type == "vector":
+#                     gdf = self._convert_to_geodataframe(data)
+#                     result_data = gdf
+#                 else:
+#                     result_data = data
                 
-                result = DataResult(
-                    source="bhoonidhi",
-                    query_id=query.query_id,
-                    data=result_data,
-                    metadata={
-                        "total_features": len(data.get("features", [])),
-                        "crs": query.crs,
-                        "query_params": params
-                    },
-                    timestamp=datetime.now().isoformat(),
-                    success=True
-                )
+#                 result = DataResult(
+#                     source="bhoonidhi",
+#                     query_id=query.query_id,
+#                     data=result_data,
+#                     metadata={
+#                         "total_features": len(data.get("features", [])),
+#                         "crs": query.crs,
+#                         "query_params": params
+#                     },
+#                     timestamp=datetime.now().isoformat(),
+#                     success=True
+#                 )
                 
-                # Cache the result
-                self.cache.put(query, result)
-                return result
+#                 # Cache the result
+#                 self.cache.put(query, result)
+#                 return result
             
-            else:
-                return DataResult(
-                    source="bhoonidhi",
-                    query_id=query.query_id,
-                    data=None,
-                    metadata={},
-                    timestamp=datetime.now().isoformat(),
-                    success=False,
-                    error_message=f"API request failed: {response.status_code}"
-                )
+#             else:
+#                 return DataResult(
+#                     source="bhoonidhi",
+#                     query_id=query.query_id,
+#                     data=None,
+#                     metadata={},
+#                     timestamp=datetime.now().isoformat(),
+#                     success=False,
+#                     error_message=f"API request failed: {response.status_code}"
+#                 )
                 
-        except Exception as e:
-            logger.error(f"Error fetching from Bhoonidhi: {e}")
-            return DataResult(
-                source="bhoonidhi",
-                query_id=query.query_id,
-                data=None,
-                metadata={},
-                timestamp=datetime.now().isoformat(),
-                success=False,
-                error_message=str(e)
-            )
+#         except Exception as e:
+#             logger.error(f"Error fetching from Bhoonidhi: {e}")
+#             return DataResult(
+#                 source="bhoonidhi",
+#                 query_id=query.query_id,
+#                 data=None,
+#                 metadata={},
+#                 timestamp=datetime.now().isoformat(),
+#                 success=False,
+#                 error_message=str(e)
+#             )
     
-    def _build_api_params(self, query: DataQuery) -> Dict[str, Any]:
-        """Build API parameters from query"""
-        params = {}
+#     def _build_api_params(self, query: DataQuery) -> Dict[str, Any]:
+#         """Build API parameters from query"""
+#         params = {}
         
-        if query.bbox:
-            params["bbox"] = ",".join(map(str, query.bbox))
+#         if query.bbox:
+#             params["bbox"] = ",".join(map(str, query.bbox))
         
-        if query.time_range:
-            params["start_date"] = query.time_range[0]
-            params["end_date"] = query.time_range[1]
+#         if query.time_range:
+#             params["start_date"] = query.time_range[0]
+#             params["end_date"] = query.time_range[1]
         
-        if query.filters:
-            params.update(query.filters)
+#         if query.filters:
+#             params.update(query.filters)
         
-        params["limit"] = query.max_results
-        params["format"] = "geojson"
+#         params["limit"] = query.max_results
+#         params["format"] = "geojson"
         
-        return params
+#         return params
     
-    def _convert_to_geodataframe(self, geojson_data: Dict) -> gpd.GeoDataFrame:
-        """Convert GeoJSON response to GeoDataFrame"""
-        if "features" in geojson_data and geojson_data["features"]:
-            return gpd.GeoDataFrame.from_features(geojson_data["features"])
-        else:
-            return gpd.GeoDataFrame(crs="EPSG:4326")
+#     def _convert_to_geodataframe(self, geojson_data: Dict) -> gpd.GeoDataFrame:
+#         """Convert GeoJSON response to GeoDataFrame"""
+#         if "features" in geojson_data and geojson_data["features"]:
+#             return gpd.GeoDataFrame.from_features(geojson_data["features"])
+#         else:
+#             return gpd.GeoDataFrame(crs="EPSG:4326")
     
-    def get_available_datasets(self) -> List[Dict[str, Any]]:
-        """Get available datasets from Bhoonidhi"""
-        try:
-            headers = {"Authorization": f"Bearer {self.api_key}"} if self.api_key else {}
-            response = requests.get(
-                urljoin(self.base_url, "datasets"),
-                headers=headers,
-                timeout=30
-            )
+#     def get_available_datasets(self) -> List[Dict[str, Any]]:
+#         """Get available datasets from Bhoonidhi"""
+#         try:
+#             headers = {"Authorization": f"Bearer {self.api_key}"} if self.api_key else {}
+#             response = requests.get(
+#                 urljoin(self.base_url, "datasets"),
+#                 headers=headers,
+#                 timeout=30
+#             )
             
-            if response.status_code == 200:
-                return response.json().get("datasets", [])
-            else:
-                logger.error(f"Failed to fetch datasets: {response.status_code}")
-                return []
+#             if response.status_code == 200:
+#                 return response.json().get("datasets", [])
+#             else:
+#                 logger.error(f"Failed to fetch datasets: {response.status_code}")
+#                 return []
                 
-        except Exception as e:
-            logger.error(f"Error fetching datasets: {e}")
-            return []
+#         except Exception as e:
+#             logger.error(f"Error fetching datasets: {e}")
+#             return []
     
-    def validate_query(self, query: DataQuery) -> bool:
-        """Validate query for Bhoonidhi"""
-        return query.data_type in ["vector", "raster", "metadata"]
+#     def validate_query(self, query: DataQuery) -> bool:
+#         """Validate query for Bhoonidhi"""
+#         return query.data_type in ["vector", "raster", "metadata"]
 
 class OpenStreetMapAPI(DataSourceInterface):
     """Interface to OpenStreetMap Overpass API"""
@@ -793,7 +793,7 @@ class DataSourceManager:
     
     def __init__(self):
         self.sources = {
-            "bhoonidhi": BhoonidhiAPI(),
+            # "bhoonidhi": BhoonidhiAPI(),
             "osm": OpenStreetMapAPI(),
             "stac": STACCatalog(),
             "local": LocalDataStore()

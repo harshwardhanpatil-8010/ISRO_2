@@ -21,8 +21,8 @@ langchain>=0.1.0
 faiss-cpu>=1.7.0
 
 # Geospatial processing
-# gdal>=3.6.0
-# # pyqgis
+ gdal>=3.6.0
+ pyqgis
  grass-python
  whitebox>=2.3.0
 
