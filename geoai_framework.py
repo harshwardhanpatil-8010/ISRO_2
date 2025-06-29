@@ -80,24 +80,27 @@ class GeoAIReasoningEngine:
     def _invoke_llm(self, prompt: str) -> str:
         """Generates a response from the LLM and extracts a clean JSON string."""
         try:
-            # Move inputs to the same device as the model
-            inputs = self.tokenizer(prompt, return_tensors="pt").to(self.device)
+            # Tokenize the input prompt
+            input_ids = self.tokenizer(prompt, return_tensors="pt").input_ids.to(self.device)
             
+            # Generate output, starting from the input_ids
             outputs = self.model.generate(
-                **inputs,
+                input_ids,
                 max_new_tokens=self.model_config.max_tokens,
                 temperature=self.model_config.temperature,
                 top_p=self.model_config.top_p,
                 pad_token_id=self.tokenizer.eos_token_id
             )
-            response = self.tokenizer.decode(outputs[0], skip_special_tokens=True)
             
-            # Find the start of the first JSON object or array
-            start_brace = response.find('{')
-            start_bracket = response.find('[')
+            # Decode only the newly generated tokens, skipping the prompt
+            response_text = self.tokenizer.decode(outputs[0][len(input_ids[0]):], skip_special_tokens=True)
+
+            # Find the start of the first JSON object or array in the *new* text
+            start_brace = response_text.find('{')
+            start_bracket = response_text.find('[')
 
             if start_brace == -1 and start_bracket == -1:
-                logger.error("No JSON object or array found in LLM response.")
+                logger.error(f"No JSON object or array found in LLM response: {response_text}")
                 return "[]"
 
             if start_brace == -1:
@@ -107,18 +110,17 @@ class GeoAIReasoningEngine:
             else:
                 json_start_index = min(start_brace, start_bracket)
 
-            json_string = response[json_start_index:]
+            json_string = response_text[json_start_index:]
             
             # Use the decoder to parse one valid JSON object and ignore trailing text
             decoder = json.JSONDecoder()
             try:
                 obj, end_index = decoder.raw_decode(json_string)
-                # Return the substring that is valid JSON
                 return json_string[:end_index]
             except json.JSONDecodeError as e:
                 logger.error(f"Failed to decode JSON from LLM response: {e}")
                 logger.debug(f"Problematic JSON string for decoder: {json_string}")
-                return "[]" # Return an empty list for workflow planning on error
+                return "[]"
 
         except Exception as e:
             logger.error(f"LLM invocation failed: {e}")
