@@ -8,7 +8,7 @@ from enum import Enum
 import geopandas as gpd
 import rasterio
 from pathlib import Path
-from transformers import AutoTokenizer, AutoModelForCausalLM
+from transformers import AutoTokenizer, AutoModelForCausalLM, BitsAndBytesConfig
 import torch
 
 from config import Config
@@ -59,9 +59,19 @@ class GeoAIReasoningEngine:
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         logger.info(f"Using device: {self.device}")
 
+        # Configure 4-bit quantization
+        quantization_config = BitsAndBytesConfig(
+            load_in_4bit=True,
+            bnb_4bit_compute_dtype=torch.float16
+        )
+
         self.tokenizer = AutoTokenizer.from_pretrained(self.model_config.model_path, token=self.token)
-        self.model = AutoModelForCausalLM.from_pretrained(self.model_config.model_path, token=self.token)
-        self.model.to(self.device) # Move model to the selected device
+        self.model = AutoModelForCausalLM.from_pretrained(
+            self.model_config.model_path, 
+            token=self.token,
+            quantization_config=quantization_config,
+            device_map="auto" # Automatically handle device placement
+        )
 
         self.geoprocessing_toolkit = GeoprocessingToolkit()
         self.reasoning_history = []
