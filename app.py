@@ -232,7 +232,13 @@ class GeoAIApp:
             st.error("Failed to generate a valid workflow plan.")
             return
 
-        initial_data = self.fetch_data_for_workflow(query_analysis.get('data_requirements', []), config['bbox'])
+        # Infer initial data requirements by inspecting the generated workflow
+        all_step_outputs = {step.output_data for step in workflow_steps}
+        all_step_inputs = {inp for step in workflow_steps for inp in step.input_data}
+        initial_data_requirements = list(all_step_inputs - all_step_outputs)
+        logger.info(f"Inferred initial data requirements from workflow: {initial_data_requirements}")
+
+        initial_data = self.fetch_data_for_workflow(initial_data_requirements, config['bbox'])
 
         with st.spinner("Executing workflow..."):
             workflow_result = self.geoai_engine.execute_workflow(workflow_steps, initial_data)
