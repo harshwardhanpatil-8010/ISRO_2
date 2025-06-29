@@ -19,7 +19,23 @@ from geoai_framework import GeoAIReasoningEngine, TaskType, WorkflowResult
 from config import Config
 from data_sources import DataSourceManager, DataQuery
 from geoprocessing_tools import GeoprocessingToolkit
+@st.cache_resource
+def load_system_components():
+    try:
+        hf_token = st.secrets["HUGGINGFACE_API_KEY"]
+        login(token=hf_token)
 
+        engine = GeoAIReasoningEngine()
+        data_manager = DataSourceManager()
+        toolkit = GeoprocessingToolkit()
+        logger.info("System components loaded successfully")
+        return engine, data_manager, toolkit
+
+    except Exception as e:
+        st.error(f"Failed to load system components: {str(e)}")
+        logger.error(f"Component loading error: {e}")
+        return None, None, None
+    
 os.makedirs("logs", exist_ok=True)
 # Configure logging
 logging.basicConfig(
@@ -100,7 +116,8 @@ st.markdown("""
 class GeoAIApp:
     def __init__(self):
         self.initialize_session_state()
-        self.geoai_engine, self.data_manager, self.geoprocessing_toolkit = self.load_system_components()
+        self.geoai_engine, self.data_manager, self.geoprocessing_toolkit = load_system_components()
+
 
     
     def initialize_session_state(self):
@@ -110,22 +127,6 @@ class GeoAIApp:
         if 'current_workflow' not in st.session_state:
             st.session_state.current_workflow = None
     
-    @st.cache_resource
-    def load_system_components(self):
-        try:
-            from huggingface_hub import login
-            hf_token = st.secrets["HUGGINGFACEHUB_API_TOKEN"]
-            login(token=hf_token)
-
-            engine = GeoAIReasoningEngine()
-            data_manager = DataSourceManager()
-            toolkit = GeoprocessingToolkit()
-            logger.info("System components loaded successfully")
-            return engine, data_manager, toolkit
-        except Exception as e:
-            st.error(f"Failed to load system components: {str(e)}")
-            logger.error(f"Component loading error: {e}")
-            return None, None, None
 
 
     def render_header(self):
