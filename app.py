@@ -19,6 +19,7 @@ from config import Config
 from data_sources import DataSourceManager, DataQuery
 from geoprocessing_tools import GeoprocessingToolkit
 
+os.makedirs("logs", exist_ok=True)
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
