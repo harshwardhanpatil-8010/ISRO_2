@@ -1,0 +1,39 @@
+streamlit>=1.28.0
+pandas>=1.5.0
+geopandas>=0.13.0
+rasterio>=1.3.0
+fiona>=1.8.0
+folium>=0.14.0
+streamlit-folium>=0.13.0
+plotly>=5.15.0
+folium>=0.14.0
+pydeck>=0.8.0
+geopandas>=0.13.0
+shapely>=2.0.0
+rasterio>=1.3.0
+requests>=2.28.0
+
+# LLM and AI libraries
+transformers>=4.30.0
+torch>=2.0.0
+sentence-transformers>=2.2.0
+langchain>=0.1.0
+faiss-cpu>=1.7.0
+
+# Geospatial processing
+# gdal>=3.6.0
+# # pyqgis
+ grass-python
+ whitebox>=2.3.0
+
+# Additional utilities
+requests>=2.28.0
+numpy>=1.24.0
+scipy>=1.10.0
+scikit-learn>=1.3.0
+python-dotenv>=1.0.0
+
+# Development tools
+pytest>=7.0.0
+black>=23.0.0
+flake8>=6.0.0

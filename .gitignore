@@ -1,0 +1,15 @@
+# This is a .gitignore file for a Python project
+# It specifies files and directories that should be ignored by Git
+
+# .gitignore
+__pycache__/
+*.py[cod]
+*.ipynb_checkpoints
+*.log
+.venv/
+.env
+*.csv
+*.npy
+*.h5
+*.pt
+*.pkl
