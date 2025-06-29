@@ -68,7 +68,7 @@ class GeoAIReasoningEngine:
         logger.info(f"Initialized GeoAIReasoningEngine with model: {self.model_config.name}")
 
     def _invoke_llm(self, prompt: str) -> str:
-        """Generates a response from the LLM given a prompt."""
+        """Generates a response from the LLM and extracts a clean JSON string."""
         try:
             # Move inputs to the same device as the model
             inputs = self.tokenizer(prompt, return_tensors="pt").to(self.device)
@@ -82,18 +82,37 @@ class GeoAIReasoningEngine:
             )
             response = self.tokenizer.decode(outputs[0], skip_special_tokens=True)
             
-            # Improved JSON extraction
-            # This regex finds a JSON object or array, even with leading/trailing text
-            json_match = re.search(r'(\[.*\]|{.*})', response, re.DOTALL)
-            if json_match:
-                return json_match.group(1)
+            # Find the start of the first JSON object or array
+            start_brace = response.find('{')
+            start_bracket = response.find('[')
+
+            if start_brace == -1 and start_bracket == -1:
+                logger.error("No JSON object or array found in LLM response.")
+                return "[]"
+
+            if start_brace == -1:
+                json_start_index = start_bracket
+            elif start_bracket == -1:
+                json_start_index = start_brace
             else:
-                logger.error("No JSON object found in LLM response.")
-                return "{}"
+                json_start_index = min(start_brace, start_bracket)
+
+            json_string = response[json_start_index:]
+            
+            # Use the decoder to parse one valid JSON object and ignore trailing text
+            decoder = json.JSONDecoder()
+            try:
+                obj, end_index = decoder.raw_decode(json_string)
+                # Return the substring that is valid JSON
+                return json_string[:end_index]
+            except json.JSONDecodeError as e:
+                logger.error(f"Failed to decode JSON from LLM response: {e}")
+                logger.debug(f"Problematic JSON string for decoder: {json_string}")
+                return "[]" # Return an empty list for workflow planning on error
 
         except Exception as e:
             logger.error(f"LLM invocation failed: {e}")
-            return "{}"
+            return "[]"
 
     def analyze_query(self, user_query: str) -> Dict[str, Any]:
         """
@@ -159,14 +178,16 @@ class GeoAIReasoningEngine:
         llm_response = self._invoke_llm(prompt)
 
         try:
-            # Handle both list (for workflow) and dict (for analysis) responses
-            if llm_response.strip().startswith('['):
-                workflow_steps_data = json.loads(llm_response)
+            if not llm_response.strip():
+                raise json.JSONDecodeError("Empty response from LLM", llm_response, 0)
+
+            workflow_steps_data = json.loads(llm_response)
+            
+            if isinstance(workflow_steps_data, list):
                 workflow_steps = [GeoprocessingStep(**step) for step in workflow_steps_data]
-            elif llm_response.strip().startswith('{'):
-                # This case might happen if the model returns a single object instead of a list
-                workflow_step_data = json.loads(llm_response)
-                workflow_steps = [GeoprocessingStep(**workflow_step_data)]
+            elif isinstance(workflow_steps_data, dict):
+                # Handle cases where the model might return a single step as a dictionary
+                workflow_steps = [GeoprocessingStep(**workflow_steps_data)]
             else:
                 workflow_steps = []
 
