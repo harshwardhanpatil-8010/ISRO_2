@@ -1,6 +1,7 @@
 import os
 import json
 import logging
+import re
 from typing import Dict, List, Any, Optional
 from dataclasses import dataclass, asdict
 from enum import Enum
@@ -53,8 +54,15 @@ class GeoAIReasoningEngine:
     def __init__(self, model_name: str = "gemma-2b-it"):
         self.model_config = Config.get_model_config(model_name)
         self.token = os.getenv("HUGGINGFACE_API_KEY")
+        
+        # Check for GPU availability
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        logger.info(f"Using device: {self.device}")
+
         self.tokenizer = AutoTokenizer.from_pretrained(self.model_config.model_path, token=self.token)
         self.model = AutoModelForCausalLM.from_pretrained(self.model_config.model_path, token=self.token)
+        self.model.to(self.device) # Move model to the selected device
+
         self.geoprocessing_toolkit = GeoprocessingToolkit()
         self.reasoning_history = []
         logger.info(f"Initialized GeoAIReasoningEngine with model: {self.model_config.name}")
@@ -62,7 +70,9 @@ class GeoAIReasoningEngine:
     def _invoke_llm(self, prompt: str) -> str:
         """Generates a response from the LLM given a prompt."""
         try:
-            inputs = self.tokenizer(prompt, return_tensors="pt")
+            # Move inputs to the same device as the model
+            inputs = self.tokenizer(prompt, return_tensors="pt").to(self.device)
+            
             outputs = self.model.generate(
                 **inputs,
                 max_new_tokens=self.model_config.max_tokens,
@@ -71,9 +81,16 @@ class GeoAIReasoningEngine:
                 pad_token_id=self.tokenizer.eos_token_id
             )
             response = self.tokenizer.decode(outputs[0], skip_special_tokens=True)
-            # Extract the JSON part of the response
-            json_response = response[response.find('{'):response.rfind('}')+1]
-            return json_response
+            
+            # Improved JSON extraction
+            # This regex finds a JSON object or array, even with leading/trailing text
+            json_match = re.search(r'(\[.*\]|{.*})', response, re.DOTALL)
+            if json_match:
+                return json_match.group(1)
+            else:
+                logger.error("No JSON object found in LLM response.")
+                return "{}"
+
         except Exception as e:
             logger.error(f"LLM invocation failed: {e}")
             return "{}"
@@ -142,8 +159,17 @@ class GeoAIReasoningEngine:
         llm_response = self._invoke_llm(prompt)
 
         try:
-            workflow_steps_data = json.loads(llm_response)
-            workflow_steps = [GeoprocessingStep(**step) for step in workflow_steps_data]
+            # Handle both list (for workflow) and dict (for analysis) responses
+            if llm_response.strip().startswith('['):
+                workflow_steps_data = json.loads(llm_response)
+                workflow_steps = [GeoprocessingStep(**step) for step in workflow_steps_data]
+            elif llm_response.strip().startswith('{'):
+                # This case might happen if the model returns a single object instead of a list
+                workflow_step_data = json.loads(llm_response)
+                workflow_steps = [GeoprocessingStep(**workflow_step_data)]
+            else:
+                workflow_steps = []
+
             self.reasoning_history.append(f"Workflow Planned: {len(workflow_steps)} steps generated.")
             return workflow_steps
         except (json.JSONDecodeError, TypeError) as e:
