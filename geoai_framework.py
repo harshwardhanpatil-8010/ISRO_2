@@ -163,43 +163,20 @@ class GeoAIReasoningEngine:
         available_tools = json.dumps(self.geoprocessing_toolkit.get_tool_schemas(), indent=2)
         
         prompt = f"""
-        You are an expert geospatial workflow planner. Your task is to convert a query analysis into a detailed, step-by-step workflow plan in JSON format.
+[SYSTEM]
+This is a new, independent request. Your sole task is to generate a JSON array of geoprocessing steps based on the provided analysis and tools. Your entire output must be only the JSON array. Do not add any other text or repeat the analysis object.
+[/SYSTEM]
 
-        **Query Analysis:**
-        ```json
-        {json.dumps({k: v.value if isinstance(v, Enum) else v for k, v in query_analysis.items()}, indent=2)}
-        ```
+[ANALYSIS]
+{json.dumps({k: v.value if isinstance(v, Enum) else v for k, v in query_analysis.items()}, indent=2)}
+[/ANALYSIS]
 
-        **Available Tools:**
-        ```json
-        {available_tools}
-        ```
+[AVAILABLE_TOOLS]
+{available_tools}
+[/AVAILABLE_TOOLS]
 
-        **Instructions:**
-        Based *only* on the `Query Analysis` and `Available Tools` provided, generate a JSON array of workflow steps. Do NOT include the original query analysis in your response. Your entire response must be a single JSON array `[...]`.
-
-        Each step in the array must be a JSON object with the following keys: "step_id", "operation", "parameters", "input_data", "output_data", "reasoning", "dependencies".
-
-        **Example Output Format:**
-        ```json
-        [
-          {{
-            "step_id": "step_1_buffer",
-            "operation": "buffer",
-            "parameters": {{
-              "distance": 1000,
-              "input_layer": "water_bodies"
-            }},
-            "input_data": ["water_bodies"],
-            "output_data": "water_buffer_zones",
-            "reasoning": "Create a 1km buffer around water bodies to identify nearby areas.",
-            "dependencies": []
-          }}
-        ]
-        ```
-
-        **JSON Workflow Plan:**
-        """
+[WORKFLOW_PLAN_JSON]
+"""
         
         self.reasoning_history.append("Planning workflow with LLM...")
         llm_response = self._invoke_llm(prompt)
