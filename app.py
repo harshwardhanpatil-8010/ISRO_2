@@ -193,6 +193,7 @@ class GeoAIApp:
                     "water_bodies": ("osm", {"feature_type": "water"}),
                     "roads": ("osm", {"feature_type": "roads"}),
                     "buildings": ("osm", {"feature_type": "buildings"}),
+                    "land_cover": ("osm", {"feature_type": "landuse"}),
                     # "dem": ("bhoonidhi", {"product": "SRTM 1-arc-second DEM"}) # Placeholder
                 }
                 

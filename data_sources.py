@@ -497,6 +497,15 @@ class OpenStreetMapAPI(DataSourceInterface):
                 );
                 out geom;
                 """
+            elif feature_type == "landuse":
+                overpass_query = f"""
+                [out:json][timeout:60];
+                (
+                  way["landuse"]({bbox_str});
+                  relation["landuse"]({bbox_str});
+                );
+                out geom;
+                """
             else:
                 # Generic query
                 overpass_query = f"""
