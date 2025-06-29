@@ -153,25 +153,42 @@ class GeoAIReasoningEngine:
         available_tools = json.dumps(self.geoprocessing_toolkit.get_tool_schemas(), indent=2)
         
         prompt = f"""
-        You are a geospatial workflow planner. Based on the query analysis, create a
-        step-by-step geoprocessing workflow.
+        You are an expert geospatial workflow planner. Your task is to convert a query analysis into a detailed, step-by-step workflow plan in JSON format.
 
-        Query Analysis:
+        **Query Analysis:**
+        ```json
         {json.dumps({k: v.value if isinstance(v, Enum) else v for k, v in query_analysis.items()}, indent=2)}
+        ```
 
-        Available Tools:
+        **Available Tools:**
+        ```json
         {available_tools}
+        ```
 
-        Generate a JSON array of workflow steps. Each step must be a JSON object with these keys:
-        - "step_id": A unique identifier (e.g., "step_1").
-        - "operation": The name of the tool to use from the available tools.
-        - "parameters": A dictionary of parameters for the tool.
-        - "input_data": A list of input data names (from previous steps or initial data).
-        - "output_data": The name for the output of this step.
-        - "reasoning": A brief explanation of why this step is necessary.
-        - "dependencies": A list of step_ids that must be completed before this one.
+        **Instructions:**
+        Based *only* on the `Query Analysis` and `Available Tools` provided, generate a JSON array of workflow steps. Do NOT include the original query analysis in your response. Your entire response must be a single JSON array `[...]`.
 
-        JSON Workflow Plan:
+        Each step in the array must be a JSON object with the following keys: "step_id", "operation", "parameters", "input_data", "output_data", "reasoning", "dependencies".
+
+        **Example Output Format:**
+        ```json
+        [
+          {{
+            "step_id": "step_1_buffer",
+            "operation": "buffer",
+            "parameters": {{
+              "distance": 1000,
+              "input_layer": "water_bodies"
+            }},
+            "input_data": ["water_bodies"],
+            "output_data": "water_buffer_zones",
+            "reasoning": "Create a 1km buffer around water bodies to identify nearby areas.",
+            "dependencies": []
+          }}
+        ]
+        ```
+
+        **JSON Workflow Plan:**
         """
         
         self.reasoning_history.append("Planning workflow with LLM...")
@@ -181,15 +198,20 @@ class GeoAIReasoningEngine:
             if not llm_response.strip():
                 raise json.JSONDecodeError("Empty response from LLM", llm_response, 0)
 
-            workflow_steps_data = json.loads(llm_response)
+            parsed_json = json.loads(llm_response)
             
-            if isinstance(workflow_steps_data, list):
-                workflow_steps = [GeoprocessingStep(**step) for step in workflow_steps_data]
-            elif isinstance(workflow_steps_data, dict):
-                # Handle cases where the model might return a single step as a dictionary
-                workflow_steps = [GeoprocessingStep(**workflow_steps_data)]
-            else:
-                workflow_steps = []
+            # Defensive check: Ensure the response is a list of steps
+            if not isinstance(parsed_json, list):
+                logger.error(f"LLM returned a dictionary, not a list of steps. Response: {parsed_json}")
+                return []
+
+            workflow_steps = []
+            for step_data in parsed_json:
+                # Ensure the item is a dictionary and has the required keys
+                if isinstance(step_data, dict) and 'step_id' in step_data and 'operation' in step_data:
+                    workflow_steps.append(GeoprocessingStep(**step_data))
+                else:
+                    logger.warning(f"Skipping malformed step in workflow plan: {step_data}")
 
             self.reasoning_history.append(f"Workflow Planned: {len(workflow_steps)} steps generated.")
             return workflow_steps
