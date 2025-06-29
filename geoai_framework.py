@@ -51,7 +51,7 @@ class WorkflowResult:
 class GeoAIReasoningEngine:
     """Chain-of-Thought reasoning engine for geospatial analysis, powered by an LLM."""
     
-    def __init__(self, model_name: str = "gemma-2b-it"):
+    def __init__(self, model_name: str = "mistral-7b"):
         self.model_config = Config.get_model_config(model_name)
         self.token = os.getenv("HUGGINGFACE_API_KEY")
         

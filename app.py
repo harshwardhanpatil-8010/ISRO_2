@@ -139,7 +139,7 @@ class GeoAIApp:
             st.header("🛠️ System Configuration")
             
             model_options = list(Config.MODELS.keys())
-            selected_model = st.selectbox("Select LLM Model", model_options, index=model_options.index("gemma-2b-it"))
+            selected_model = st.selectbox("Select LLM Model", model_options, index=model_options.index("mistral-7b"))
             
             st.subheader("📊 Data Sources")
             st.info("Data sources are now determined automatically by the AI based on your query.")
