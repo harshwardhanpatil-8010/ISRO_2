@@ -142,7 +142,7 @@ class Config:
     @classmethod
     def get_model_config(cls, model_name: str) -> ModelConfig:
         """Get model configuration by name"""
-        return cls.MODELS.get(model_name, cls.MODELS["gemma-2b-it"])
+        return cls.MODELS.get(model_name, cls.MODELS["mistral-7b"])
     
     @classmethod
     def get_data_source_config(cls, source_name: str) -> DataSourceConfig:
