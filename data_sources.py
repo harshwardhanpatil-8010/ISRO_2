@@ -506,6 +506,15 @@ class OpenStreetMapAPI(DataSourceInterface):
                 );
                 out geom;
                 """
+            elif feature_type == "boundaries":
+                overpass_query = f"""
+                [out:json][timeout:60];
+                (
+                  way["boundary"="administrative"]({bbox_str});
+                  relation["boundary"="administrative"]({bbox_str});
+                );
+                out geom;
+                """
             else:
                 # Generic query
                 overpass_query = f"""

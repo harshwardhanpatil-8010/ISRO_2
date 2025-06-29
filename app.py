@@ -194,6 +194,7 @@ class GeoAIApp:
                     "roads": ("osm", {"feature_type": "roads"}),
                     "buildings": ("osm", {"feature_type": "buildings"}),
                     "land_cover": ("osm", {"feature_type": "landuse"}),
+                    "Maharashtra_boundaries": ("osm", {"feature_type": "boundaries"}),
                     # "dem": ("bhoonidhi", {"product": "SRTM 1-arc-second DEM"}) # Placeholder
                 }
                 
