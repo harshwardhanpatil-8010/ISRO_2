@@ -539,33 +539,31 @@ class OpenStreetMapAPI(DataSourceInterface):
         return overpass_query
     
     def _convert_osm_to_geodataframe(self, osm_data: Dict) -> gpd.GeoDataFrame:
-        """Convert OSM JSON to GeoDataFrame"""
+        """Convert OSM JSON to a GeoDataFrame containing only Polygons."""
         features = []
         
+        # Process ways, which can be polygons
         for element in osm_data.get("elements", []):
-            if element["type"] == "node" and "lat" in element and "lon" in element:
-                geometry = Point(element["lon"], element["lat"])
-                properties = element.get("tags", {})
-                properties["osm_id"] = element["id"]
-                properties["osm_type"] = "node"
-                features.append({"geometry": geometry, **properties})
-            
-            elif element["type"] == "way" and "geometry" in element:
+            if element.get("type") == "way" and "geometry" in element:
                 coords = [(pt["lon"], pt["lat"]) for pt in element["geometry"]]
-                if len(coords) > 1:
-                    if coords[0] == coords[-1] and len(coords) > 3:
-                        geometry = Polygon(coords[:-1])  # Remove duplicate last point
-                    else:
-                        geometry = LineString(coords)
-                    
-                    properties = element.get("tags", {})
-                    properties["osm_id"] = element["id"]
-                    properties["osm_type"] = "way"
-                    features.append({"geometry": geometry, **properties})
+                # A valid polygon must have at least 4 points, with the first and last being the same.
+                if len(coords) >= 4 and coords[0] == coords[-1]:
+                    try:
+                        geometry = Polygon(coords)
+                        properties = element.get("tags", {})
+                        properties["osm_id"] = element["id"]
+                        properties["osm_type"] = "way"
+                        features.append({"geometry": geometry, **properties})
+                    except Exception as e:
+                        logger.warning(f"Could not create polygon from way {element['id']}: {e}")
+
+        # Note: This implementation does not handle complex multipolygons from relations.
+        # For the scope of this error, filtering ways is the most direct solution.
         
         if features:
             return gpd.GeoDataFrame(features, crs="EPSG:4326")
         else:
+            # Return an empty GeoDataFrame if no polygons were found
             return gpd.GeoDataFrame(columns=["geometry"], crs="EPSG:4326")
     
     def get_available_datasets(self) -> List[Dict[str, Any]]:
