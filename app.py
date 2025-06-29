@@ -12,6 +12,7 @@ import folium
 from streamlit_folium import st_folium
 import plotly.express as px
 import plotly.graph_objects as go
+from huggingface_hub import login
 
 # Import custom modules
 from geoai_framework import GeoAIReasoningEngine, TaskType, WorkflowResult
@@ -108,19 +109,26 @@ class GeoAIApp:
         if 'current_workflow' not in st.session_state:
             st.session_state.current_workflow = None
     
-    @st.cache_resource
-    def load_system_components(_self):
-        """Load and initialize system components, cached for performance."""
-        try:
-            engine = GeoAIReasoningEngine()
-            data_manager = DataSourceManager()
-            toolkit = GeoprocessingToolkit()
-            logger.info("System components loaded successfully")
-            return engine, data_manager, toolkit
-        except Exception as e:
-            st.error(f"Failed to load system components: {str(e)}")
-            logger.error(f"Component loading error: {e}")
-            return None, None, None
+@st.cache_resource
+def load_system_components(_self):
+    """Load and initialize system components, cached for performance."""
+    try:
+        # ✅ Authenticate with Hugging Face
+        from huggingface_hub import login
+        hf_token = st.secrets["HUGGINGFACE_API_KEY"]
+        login(token=hf_token)
+
+        # Now initialize components
+        engine = GeoAIReasoningEngine()
+        data_manager = DataSourceManager()
+        toolkit = GeoprocessingToolkit()
+        logger.info("System components loaded successfully")
+        return engine, data_manager, toolkit
+    except Exception as e:
+        st.error(f"Failed to load system components: {str(e)}")
+        logger.error(f"Component loading error: {e}")
+        return None, None, None
+
 
     def render_header(self):
         """Render the main application header"""
@@ -355,6 +363,7 @@ class GeoAIApp:
             self.render_workflow_steps(st.session_state.current_workflow)
             st.markdown("---")
             self.render_results_visualization(st.session_state.current_workflow)
+
 
 if __name__ == "__main__":
     app = GeoAIApp()
