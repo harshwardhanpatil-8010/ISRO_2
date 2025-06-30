@@ -189,14 +189,17 @@ class DataCache:
             if time.time() - timestamp < ttl:
                 try:
                     if Path(filepath).exists():
-                        # Load cached data based on file extension
-                        if filepath.endswith('.geojson'):
+                        # Load cached data based on file extension or content
+                        if filepath.suffix == '.geojson':
                             data = gpd.read_file(filepath)
-                        elif filepath.endswith('.tif'):
-                            data = rasterio.open(filepath)
                         else:
                             with open(filepath, 'r') as f:
-                                data = json.load(f)
+                                content = json.load(f)
+                                # Check if it's a cached raster path
+                                if isinstance(content, dict) and content.get('type') == 'raster_path':
+                                    data = content['path']
+                                else:
+                                    data = content
                         
                         return DataResult(
                             source="cache",
@@ -220,14 +223,17 @@ class DataCache:
         filepath = self.cache_dir / f"{cache_key}.geojson"
         
         try:
-            # Save data based on type
+            # Determine the correct file extension for the cache file
             if isinstance(result.data, gpd.GeoDataFrame):
+                filepath = self.cache_dir / f"{cache_key}.geojson"
                 result.data.to_file(filepath, driver='GeoJSON')
-            elif hasattr(result.data, 'read'):  # Raster data
-                filepath = self.cache_dir / f"{cache_key}.tif"
-                # For raster data, we'd copy the file here
-                pass
+            elif isinstance(result.data, str) and Path(result.data).suffix.lower() in ['.tif', '.tiff']:
+                # If the data is a path to a raster file, cache the path itself
+                filepath = self.cache_dir / f"{cache_key}.json"
+                with open(filepath, 'w') as f:
+                    json.dump({'type': 'raster_path', 'path': result.data}, f)
             else:
+                # For other data types (like metadata dicts), save as generic JSON
                 filepath = self.cache_dir / f"{cache_key}.json"
                 with open(filepath, 'w') as f:
                     json.dump(result.data, f)
