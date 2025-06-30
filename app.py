@@ -195,6 +195,7 @@ class GeoAIApp:
                     "buildings": ("osm", {"feature_type": "buildings"}),
                     "land_cover": ("osm", {"feature_type": "landuse"}),
                     "Maharashtra_boundaries": ("osm", {"feature_type": "boundaries"}),
+                    "DEM_raster": ("local", {"filename": "dem.hdr"}), # Fetch DEM from local file
                     # "dem": ("bhoonidhi", {"product": "SRTM 1-arc-second DEM"}) # Placeholder
                 }
                 
