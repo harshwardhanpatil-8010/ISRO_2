@@ -722,7 +722,7 @@ class LocalDataStore(DataSourceInterface):
                             data = data[data.geometry.intersects(bbox_geom)]
                     
                     elif filepath.suffix.lower() in ['.tif', '.tiff']:
-                        data = rasterio.open(filepath)
+                        data = str(filepath) # Return the path, not the opened object
                     
                     else:
                         with open(filepath, 'r') as f:

@@ -6,6 +6,7 @@ from shapely.geometry import shape
 from typing import Dict, List, Any
 import logging
 from abc import ABC, abstractmethod
+from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
@@ -92,6 +93,9 @@ class SlopeAnalysisTool(GeoprocessingTool):
     def execute(self, parameters: Dict[str, Any], inputs: Dict[str, Any]) -> Dict[str, Any]:
         try:
             input_raster_path = inputs.get(parameters['input_raster'])
+
+            if not isinstance(input_raster_path, str) or not Path(input_raster_path).exists():
+                return {'error': f"Input raster path is not a valid file: {input_raster_path}"}
 
             with rasterio.open(input_raster_path) as src:
                 # A simple slope calculation (replace with a more robust method if needed)
