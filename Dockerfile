@@ -1,62 +1,73 @@
-FROM nvidia/cuda:12.1.1-cudnn8-devel-ubuntu22.04
+# Dockerfile for the GeoAI Streamlit Application
 
-# 1. Set up environment
+# --- Base Stage ---
+# Use an NVIDIA CUDA base image that includes Python and development tools
+# This supports the GPU requirements of the ML models (torch, bitsandbytes)
+FROM nvidia/cuda:12.1.1-cudnn8-devel-ubuntu22.04 AS base
+
+# Set environment variables for non-interactive installation
 ENV DEBIAN_FRONTEND=noninteractive
 ENV PYTHONUNBUFFERED=1
-WORKDIR /app
 
-# 2. Install system dependencies
-# Install Python, PIP, and essential build tools.
-# Install libgdal-dev for geospatial libraries like rasterio and geopandas.
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
-    python3.10 python3-pip python3.10-venv build-essential libgdal-dev gdal-bin && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
+# Install system dependencies
+# - python3-pip for package management
+# - libgdal-dev and gdal-bin for geospatial libraries (geopandas, rasterio)
+# - git for any potential VCS dependencies
+RUN apt-get update \ 
+    && apt-get install -y --no-install-recommends \
+    python3.10 \
+    python3-pip \
+    python3-venv \
+    libgdal-dev \
+    gdal-bin \
+    git \
+    && rm -rf /var/lib/apt/lists/*
 
-# Create a symlink for python3 to be the default
-RUN ln -s /usr/bin/python3 /usr/bin/python
-
-# 3. Install Python dependencies
-# Create and activate a virtual environment for better dependency management.
+# Create a virtual environment
 RUN python3 -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
 
-# Upgrade pip
-RUN pip install --no-cache-dir --upgrade pip
+# --- Builder Stage ---
+# This stage installs Python dependencies
+FROM base AS builder
 
-# Install PyTorch with CUDA 12.1 support first to ensure compatibility.
-# See https://pytorch.org/ for the correct command for your CUDA version.
+WORKDIR /app
+
+# First, install PyTorch with CUDA support. This is crucial for GPU acceleration.
+# Installing it separately ensures the correct version is pulled from NVIDIA's index.
 RUN pip install --no-cache-dir torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
 
-# Install remaining application and ML dependencies.
-# These are installed in a single layer to optimize image size.
-RUN pip install --no-cache-dir \
-    streamlit \
-    pandas \
-    geopandas \
-    rasterio \
-    folium \
-    streamlit-folium \
-    plotly \
-    python-dotenv \
-    requests \
-    numpy \
-    shapely \
-    transformers \
-    accelerate \
-    bitsandbytes \
-    scipy
+# Create and copy requirements.txt to leverage Docker layer caching
+COPY requirements.txt .
 
-# 4. Copy application code
+# Install the rest of the Python packages
+RUN pip install --no-cache-dir -r requirements.txt
+
+# --- Final Stage ---
+# This is the final, production-ready image
+FROM base AS final
+
+WORKDIR /app
+
+# Copy the virtual environment from the builder stage
+COPY --from=builder /opt/venv /opt/venv
+
+# Set the path to the venv
+ENV PATH="/opt/venv/bin:$PATH"
+
+# Copy the application source code
 COPY . .
 
-# 5. Create log directory as specified in app.py
-RUN mkdir -p logs
+# Create the logs directory and set appropriate permissions
+RUN mkdir logs \
+    && chown -R 1000:1000 /app
 
-# 6. Expose the default Streamlit port
+# Switch to a non-root user for better security
+USER 1000
+
+# Expose the default Streamlit port
 EXPOSE 8501
 
-# 7. Define the entrypoint command
-# Runs the streamlit app, accessible on all network interfaces.
+# The command to run the Streamlit application
+# --server.address=0.0.0.0 is necessary to access the app from outside the container
 CMD ["streamlit", "run", "app.py", "--server.port=8501", "--server.address=0.0.0.0"]
