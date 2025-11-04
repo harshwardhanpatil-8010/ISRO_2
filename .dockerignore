@@ -1,26 +1,38 @@
-# Ignore git and virtual environment files
+# Git files
 .git
 .gitignore
-.venv
-venv/
 
-# Ignore Python cache files
+# Python artifacts
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
 
-# Ignore environment files and secrets
-.env
-*.env.*
+# Virtual environments
+.venv
+venv/
+env/
 
-# Ignore logs and test files
+# Environment files
+.env*
+
+# IDE and editor configuration
+.vscode/
+.idea/
+
+# Test files and reports
+pytest_cache/
+.pytest_cache/
+htmlcov/
+.coverage
+
+# Logs and local data
 logs/
 *.log
-test_system.py
-.pytest_cache/
+data/
+*.sqlite
 
-# Ignore IDE and OS-specific files
-.idea/
-.vscode/
-.DS_Store
+# Build artifacts
+build/
+dist/
+*.egg-info
